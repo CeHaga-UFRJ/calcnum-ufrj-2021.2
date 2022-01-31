@@ -101,20 +101,18 @@ function bisection_newton(f, df, a, b, range_size, steps)
 end
 
 #=
-Monta uma matriz de Vandermonde de tamanho columns
-u: Vetor usado como base
-columns: Colunas da matriz de Vandermonde (Para poder criar uma matriz generica)
+Monta uma matriz de Vandermonde de dado grau
+x: Vetor usado como base
+rows: Quantidade de pontos
+degree: Grau do polinomio
 =#
-function vandermonde(u, columns)
-    # linhas = linhas de u
-    rows = length(u)
-    
+function vandermonde(x, rows, degree) 
     # Cria uma matriz vazia 
-    V = zeros(rows, columns)
+    V = zeros(rows, degree+1)
     
     # Para cada coluna adiciona uma potencia de u
-    for i = 1:columns
-         V[:, i] = u.^(i-1)
+    for i = 1:degree+1
+         V[:, i] = x.^(i-1)
     end
     
     return V
@@ -122,14 +120,15 @@ end
 
 #=
 Realiza a interpolacao e retorna os coeficientes
-x: Pontos do dominio no formato (npontos, 1)
-y: Pontos avaliados no formato (npontos, 1)
+x: Pontos do dominio
+y: Pontos avaliados
+degree: Grau do polinomio
 =#
-function interpolation(x, y)
-    columns = length(y)
+function interpolation(x, y, degree)
+    rows = length(y)
     
     # Cria a matriz de Vandermonde
-    V = vandermonde(x, columns)
+    V = vandermonde(x, rows, degree)
     
     # E resolve o sistema linear
     c = V \ y
@@ -142,7 +141,7 @@ Avalia um polinomio em dados pontos a partir de sua lista de coeficientes
 c: Coeficientes no formato (ntermos, 1)
 x: Pontos a serem avaliados no formato (npontos, 1)
 =#
-function evaluate(c, x)
+function evaluate(c, x, degree)
     columns = length(c)
     
     # Cria a matriz de Vandermonde
@@ -165,11 +164,11 @@ function spline_interpolation(x, y)
     
     # O primeiro "retangulo" 3x4 eh vandermonde com x1, x2 e x3
     # O segundo "retangulo" 3x4 eh 0
-    V[1:3, 1:4] = vandermonde(x[1:3], 4)
+    V[1:3, 1:4] = vandermonde(x[1:3], 4, 3)
     
     # O terceiro "retangulo" 3x4 eh 0
     # o quarto "retangulo" 3x4 eh vandermonde com x3, x4 e x5
-    V[4:6, 5:8] = vandermonde(x[3:5], 4)
+    V[4:6, 5:8] = vandermonde(x[3:5], 4, 3)
     
     # A setima linha eh igualar as derivadas
     V[7,:] = [0 1 2x[3] 3x[3]^2 0 -1 -2x[3] -3x[3]^2]
@@ -203,4 +202,16 @@ function bilinear_interpolation(points, z)
     c = f(0, 1) - a # = a + 0 + c + 0
     d = f(1, 1) - a - b - c # = a + b + c + d
     return [a, b, c, d]
+end
+
+#=
+Calcula o erro para um determinado modelo
+x: Pontos no dominio
+y: Pontos da imagem
+model: Modelo a ser avaliado
+=#
+function calculate_error(x, y, model)
+    # Faz a soma do quadrado de cada diferenca e retorna a raiz
+    error = sum((y .- model.(x)).^2)
+    return sqrt(error)
 end
