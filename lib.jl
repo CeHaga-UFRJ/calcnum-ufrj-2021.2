@@ -21,6 +21,8 @@ end
 Aplica o metodo de Taylor para calcular ln centrado em a = 1 com erro definido
 x: Parametro de ln
 erro: Erro aceitavel
+
+Retorno: A aproximacao apos n iteracoes do metodo
 =#
 function taylor_ln(x, erro)
     # Calcula o primeiro termo da serie
@@ -46,6 +48,8 @@ f: Funcao a ser encontrada a raiz
 a: Limite inferior do intervalo
 b: Limite superior do intervalo
 error: Erro maximo
+
+Retorno: A aproximacao do metodo abaixo de um erro
 =#
 function bisection(f, a, b, error)
     # Se a >= b o intervalo esta ao contrario, erro de entrada
@@ -86,6 +90,8 @@ a: Limite inferior do intervalo
 b: Limite superior do intervalo
 range_size: Tamanho do intervalo
 steps: Passos no metodo de Newton
+
+Retorno: A aproximacao do metodo da bissecao abaixo de um erro seguido de n iteracoes do metodo de Newton
 =#
 function bisection_newton(f, df, a, b, range_size, steps)
     # Realiza o metodo da bisecao ate o intervalo determinado
@@ -105,6 +111,8 @@ Monta uma matriz de Vandermonde de dado grau
 x: Vetor usado como base
 rows: Quantidade de pontos
 degree: Grau do polinomio
+
+Retorno: Matriz de Vandermonde
 =#
 function vandermonde(x, rows, degree) 
     # Cria uma matriz vazia 
@@ -123,6 +131,8 @@ Realiza a interpolacao e retorna os coeficientes
 x: Pontos do dominio
 y: Pontos avaliados
 degree: Grau do polinomio
+
+Retorno: Coeficientes da interpolacao
 =#
 function interpolation(x, y, degree)
     rows = length(y)
@@ -140,6 +150,8 @@ end
 Avalia um polinomio em dados pontos a partir de sua lista de coeficientes
 c: Coeficientes no formato (ntermos, 1)
 x: Pontos a serem avaliados no formato (npontos, 1)
+
+Retorno: Valor do polinomio em n pontos
 =#
 function evaluate(c, x, degree)
     columns = length(c)
@@ -157,6 +169,8 @@ end
 Realiza a interpolacao por partes em 5 pontos usando 2 cubicas 
 x: Pontos do dominio ordenados no formato (5, 1)
 y: Pontos da imagem correspondentes no formato (5, 1)
+
+Retorno: Coeficiente das cubicas
 =#
 function spline_interpolation(x, y)
     # Cria uma matriz vazia
@@ -190,6 +204,8 @@ end
 Realiza a interpolacao bilinear dado 4 pontos e seus valores respectivos
 points: Uma lista com os valores [x1, x2, y1, y2]
 z: Uma lista com as alturas correspondentes [z11, z12, z21, z22]
+
+# Retorno: Coeficientes da funcao
 =#
 function bilinear_interpolation(points, z)
     x1, x2, y1, y2 = points
@@ -205,13 +221,282 @@ function bilinear_interpolation(points, z)
 end
 
 #=
-Calcula o erro para um determinado modelo
-x: Pontos no dominio
-y: Pontos da imagem
-model: Modelo a ser avaliado
+Calcula o Mean Squared Error para um determinado modelo
+predict: Pontos previstos
+real: Pontos reais
+
+Retorno: Mean Squared Error
 =#
-function calculate_error(x, y, model)
+function mse(predict, real)
     # Faz a soma do quadrado de cada diferenca e retorna a raiz
-    error = sum((y .- model.(x)).^2)
+    error = sum((predict .- real).^2)
     return sqrt(error)
+end
+
+#=
+Calcula a integral usando o metodo dos trapezios
+f: Funcao a ser calculada a integral
+a: Limite inferior de integracao
+b: Limite superior de integracao
+n: Quantidade de trapezios
+
+Retorno: Aproximacao da integral com o metodo dos trapezios apos n iteracoes
+=#
+function integral_trapezoid(f, a, b, n = 1000)
+    # Calcula distancia entre cada ponto
+    h = (b-a)/n
+    
+    # Calcula a soma usando a formula extendida das areas
+    S = 0
+    xi = a
+    # O meio sera somado duas vezes, as pontas uma
+    for i = 0:n-1
+        S += f(xi)
+        xi += h
+        S += f(xi)
+    end
+    S *= h/2
+    
+    return S
+end
+
+#=
+Calcula a integral dupla usando o metodo dos trapezios
+f: Funcao a ser calculada a integral
+a: Limite inferior da integracao dy
+b: Limite superior da integracao dy
+h: Limite inferior da integracao dx
+g: Limite superior da integracao dx
+n: Quantidade de trapezios
+
+Retorno: Aproximacao da integral dupla com o metodo dos trapezios apos n iteracoes
+=#
+function double_integral_trapezoid(f, a, b, h, g, n = 1000)
+    # Calcula a integral para um y especifico
+    function outer_integral(y)
+        return integral_trapezoid(x -> f(x,y), h(y), g(y), n)
+    end
+    # Calcula a integral para cada y
+    return integral_trapezoid(outer_integral, a, b)
+end
+
+#=
+Resolve um sistema Ax = y onde A eh uma matriz diagonal
+A: Matrix diagonal no formato (n,n)
+y: Lado direito da equacao no formato (n,1)
+
+Retorno: Solucao x
+=#
+function resolve_diagonal(A, y)
+    # Podemos pegar o tamanho de y, pois eh o mesmo que A
+    n = length(y)
+    
+    # Divide o lado direito pelo coeficiente de cada variavel
+    x = [y[i]/A[i,i] for i = 1:n]
+    
+    return x
+end
+
+#=
+Resolve um sistema Ax = y onde A eh uma matriz triangular superior
+A: Matrix triangular superior no formato (n,n)
+y: Lado direito da equacao no formato (n,1)
+
+Retorno: Solucao x
+=#
+function resolve_triangular_superior(A, y)
+    # Podemos pegar o tamanho de y, pois eh o mesmo que A
+    n = length(y)   
+    x = zeros(n)
+    
+    # Na triangular superior, comecamos de baixo para cima, substituindo as variaveis anteriores nas equacoes
+    for i = n:(-1):1
+        x[i] = (y[i] - sum([A[i, k] * x[k] for k = i+1:n])) / A[i,i] 
+    end
+    
+    return x
+end
+
+#=
+Resolve um sistema Ax = y onde A eh uma matriz triangular inferior
+A: Matrix triangular inferior no formato (n,n)
+y: Lado direito da equacao no formato (n,1)
+
+Retorno: Solucao x
+=#
+function resolve_triangular_inferior(A, y)
+    # Podemos pegar o tamanho de y, pois eh o mesmo que A
+    n = length(y)
+    x = zeros(n)
+    
+    # Na triangular inferior, comecamos de cima para baixo, substituindo as variaveis anteriores nas equacoes
+    for i = 1:n
+        x[i] = (y[i] - sum([A[i, k] * x[k] for k = 1:i-1])) / A[i,i] 
+    end
+    
+    return x
+end
+
+#=
+Realiza a decomposicao LU de uma matriz quadrada A
+A: Matrix no formato (n,n)
+
+Retorno: Matrizes L & U da decomposicao LU
+=#
+function decomposicao_lu(A)
+    # Podemos salvar apenas um tamanho pois sao o mesmo
+    n, = size(A)
+    
+    # U comeca como uma copia de A, enquanto L comeca como uma matriz identidade
+    U = copy(A)
+    L = Matrix(1.0I, n, n)
+    
+    for i = 1:n
+        for j = i+1:n
+            # Eh calculado o coeficiente dividindo o numero da matriz pelo pivot
+            l = U[j,i] / U[i,i]
+            # O coeficiente eh o elemento de L
+            L[j,i] = l
+            # E o coeficiente eh usado para alterar a linha de U
+            U[j,:] += -l * U[i,:]
+        end
+    end
+    return L, U
+end
+
+#=
+Calcula a matriz inversa usando decomposicao LU
+A: Matriz no formato (n,n) para encontrar a inversa
+
+Retorno: Inversa de A
+=#
+function inverse_LU(A)
+    # Decompoe em LU
+    L, U = decomposicao_lu(A)
+    n, = size(A)
+    
+    # Inicializa a inversa
+    inv_A = zeros(n,n)
+    
+    # Para cada coluna
+    for i = 1:n
+        # Cria um vetor one-hot (Identidade final)
+        y = zeros(n)
+        y[i] = 1
+        
+        # Resolve o sistema para a coluna i
+        Y = resolve_triangular_inferior(L, y)
+        x = resolve_triangular_superior(U, Y)
+        
+        # Substitui a coluna i da inversa
+        inv_A[:,i] = x
+    end
+    
+    return inv_A
+end
+
+#=
+Calcula a matriz usada para o metodo das diferencas finitas
+n: Tamanho da matriz
+
+Retorno: Matriz tridiagonal [1 -2 1]
+=#
+function finite_difference_matrix(n)
+    A = zeros(n,n)
+    
+    # Comeca com -2 1
+    A[1,1] = -2
+    A[1,2] = 1
+    
+    # Termina com 1 -2
+    A[n,n-1] = 1
+    A[n,n] = -2
+    
+    # Forma uma tridiagonal com 1 -2 1
+    for i = 2:n-1
+        A[i,i-1] = 1
+        A[i,i] = -2
+        A[i,i+1] = 1
+    end
+    
+    return A
+end
+
+#=
+Realiza o metodo das diferencas finitas e retorna os pontos no meio
+n: Numero de pontos
+sd: Funcao da segunda derivada
+yi & yf: Intervalo de y
+xi & xf: Intervalo de x
+
+Retorno: Pontos do meio apos o metodo de diferencas finitas
+=#
+function finite_difference(n, sd, yi, yf, xi, xf)
+    # Calcula o tamanho do intervalo
+    h = (xf - xi)/(n-1)
+    
+    A = finite_difference_matrix(n-2)
+    b = zeros(n-2)
+    
+    # Cada equação vai possuir esse termo
+    for i = 1:n-2
+        b[i] = sd(xi + i*h) * 2 * h^2
+    end
+    
+    # Com excecao do inicio e final, que possuem os limites ja conhecidos
+    b[1] -= yi
+    b[n-2] -= yf
+    
+    # Resolve e retorna
+    y = A \ b
+    return y
+end
+
+#=
+Calcula a temperatura de cada ponto no problema do lago e resolve usando LU
+n: Tamanho do lado do lago
+tempN: Temperatura norte
+tempW: Temperatura oeste
+tempS: Temperatura sul
+tempE: Temperatura leste
+
+Retorno: Temperatura em cada ponto do lago
+=#
+function lake_degree(n, tempN, tempW, tempS, tempE)
+    A = zeros(n^2, n^2)
+    for i = 1:n^2
+        A[i,i] = 4
+        # Olha norte
+        if(i > n) A[i, i-n] = -1 end
+        
+        # Olha sul
+        if(i <= n*(n-1)) A[i, i+n] = -1 end
+        
+        # Olha oeste
+        if(i % n != 1) A[i, i-1] = -1 end
+        
+        # Olha lest
+        if(i % n != 0) A[i, i+1] = -1 end
+    end
+    
+    y = zeros(n^2)
+    
+    # Parte de cima soma norte
+    y[1 : n] += tempN * ones(n)
+    
+    # Parte de baixo soma sul
+    y[n * (n-1) + 1 : n^2] += tempS * ones(n)
+    
+    # Parte da esquerda soma oeste
+    for i = 1:n:n^2 y[i] += tempW end
+    
+    # Parte da direita soma leste
+    for i = n:n:n^2 y[i] += tempE end
+    
+    # Resolve usando decomposicao LU
+    L, U = decomposicao_lu(A)
+    Y = resolve_triangular_inferior(L, y)
+    x = resolve_triangular_superior(U, Y)
+    
+    return x
 end
